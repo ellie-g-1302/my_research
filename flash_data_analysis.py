@@ -3,6 +3,7 @@
 # This is specifically tailored for the ZPinch simulation of FLASH
 import matplotlib.pyplot as plt
 from quality_of_life import my_visualization_utils as mvu
+import os
 import pandas as pd
 import numpy as np
 import yt
@@ -135,11 +136,12 @@ class post_process_flash:
         return my_list
     
     # Okay now the very difficult one: making a gif from the data using Tom's module -----------------------------------------------------------------
-    def make_gif_from_data(self, my_file_prefix, num_of_plot_files, my_var, my_label, num_data,
+    def make_gif_from_data(self, default_dir, my_file_prefix, num_of_plot_files, my_var, my_label, num_data,
                         color2 = None, my_label2 = None, my_var2 = None, color3 = None, my_label3 = None, my_var3 = None,
                         name_of_gif = "MyGif", color = "c", scale_val = None, 
                         scale_min = None, scale_max = None, my_scale = "linear", 
-                        my_y_label = "My Data"):
+                        my_y_label = "My Data", change_dir = False, my_second_dir = None, 
+                        my_third_dir = None):
         # What this does first is iterate over number of plot file to get the proper name
         my_index = []
         my_y_value = []
@@ -155,27 +157,54 @@ class post_process_flash:
                 file_name = my_file_prefix + str(i) 
             
             if num_data == 1:
+                os.chdir(default_dir)
                 my_csv_list = post_process_flash.save_plot_file_to_csv(self, file_name, my_var, return_to_list = True)
                 my_index.append(my_csv_list[0]) #This saves the index in one list
                 my_y_value.append(my_csv_list[1]) # This saves the actual variable data in another
             if num_data == 2:
-                my_csv_list = post_process_flash.save_plot_file_to_csv(self, file_name, my_var, return_to_list = True)
-                my_csv_list_2 = post_process_flash.save_plot_file_to_csv(self, file_name, my_var2, return_to_list = True)
-                my_index.append(my_csv_list[0]) #This saves the index in one list
-                my_y_value.append(my_csv_list[1]) # This saves the actual variable data in another
-                my_y_value_2.append(my_csv_list_2[1])
+                if change_dir == True:
+                    if my_second_dir == None:
+                        print("Error: No second directory input")
+                    else: 
+                        os.chdir(default_dir)
+                        my_csv_list = post_process_flash.save_plot_file_to_csv(self, file_name, my_var, return_to_list = True)
+                        os.chdir(my_second_dir)
+                        my_csv_list_2 = post_process_flash.save_plot_file_to_csv(self, file_name, my_var2, return_to_list = True)
+                        os.chdir(default_dir)
+                        my_index.append(my_csv_list[0]) #This saves the index in one list
+                        my_y_value.append(my_csv_list[1]) # This saves the actual variable data in another
+                        my_y_value_2.append(my_csv_list_2[1])
+                elif change_dir == False:
+                    os.chdir(default_dir)
+                    my_csv_list = post_process_flash.save_plot_file_to_csv(self, file_name, my_var, return_to_list = True)
+                    my_csv_list_2 = post_process_flash.save_plot_file_to_csv(self, file_name, my_var2, return_to_list = True)
+                    my_index.append(my_csv_list[0]) #This saves the index in one list
+                    my_y_value.append(my_csv_list[1]) # This saves the actual variable data in another
+                    my_y_value_2.append(my_csv_list_2[1])
             elif num_data == 3:
-                my_csv_list = post_process_flash.save_plot_file_to_csv(self, file_name, my_var, return_to_list = True)
-                my_csv_list_2 = post_process_flash.save_plot_file_to_csv(self, file_name, my_var2, return_to_list = True)
-                my_csv_list_3 = post_process_flash.save_plot_file_to_csv(self, file_name, my_var3, return_to_list= True)
-                my_index.append(my_csv_list[0]) #This saves the index in one list
-                my_y_value.append(my_csv_list[1]) # This saves the actual variable data in another
-                my_y_value_2.append(my_csv_list_2[1])
-                my_y_value_3.append(my_csv_list_3[1])
+                if change_dir == True:
+                    my_csv_list = post_process_flash.save_plot_file_to_csv(self, file_name, my_var, return_to_list = True)
+                    os.chdir(my_second_dir)
+                    my_csv_list_2 = post_process_flash.save_plot_file_to_csv(self, file_name, my_var2, return_to_list = True)
+                    os.chdir(my_third_dir)
+                    my_csv_list_3 = post_process_flash.save_plot_file_to_csv(self, file_name, my_var3, return_to_list= True)
+                    os.chdir(default_dir)
+                    my_index.append(my_csv_list[0]) #This saves the index in one list
+                    my_y_value.append(my_csv_list[1]) # This saves the actual variable data in another
+                    my_y_value_2.append(my_csv_list_2[1])
+                    my_y_value_3.append(my_csv_list_3[1])
+                elif change_dir == False:
+                    os.chdir(default_dir)
+                    my_csv_list = post_process_flash.save_plot_file_to_csv(self, file_name, my_var, return_to_list = True)
+                    my_csv_list_2 = post_process_flash.save_plot_file_to_csv(self, file_name, my_var2, return_to_list = True)
+                    my_csv_list_3 = post_process_flash.save_plot_file_to_csv(self, file_name, my_var3, return_to_list= True)
+                    my_index.append(my_csv_list[0]) #This saves the index in one list
+                    my_y_value.append(my_csv_list[1]) # This saves the actual variable data in another
+                    my_y_value_2.append(my_csv_list_2[1])
+                    my_y_value_3.append(my_csv_list_3[1])
             elif num_data < 1 or num_data > 3:
                 print("Error: Invalid number of data files")
-                
-            
+        
         gif = mvu.GifMaker(name_of_gif, ram_only=False)
         
         for i in range(num_of_plot_files):
