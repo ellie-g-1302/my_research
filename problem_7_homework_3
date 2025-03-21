@@ -1,0 +1,166 @@
+import pandas as pd
+import numpy as py
+import numpy as np
+import math
+
+# Constants given standard air conditions
+R = 287 # J/(kg * K)
+p = 101325 # Pa 
+gamma = 1.4
+cv = 20.79
+
+# Defining Functions given problem 1
+# def rho_func(x):
+#     return 1 + 0.1*math.cos(2*math.pi * x)
+
+# def u_func(x):
+#     return 50 * math.sin(math.pi * x)
+
+# def e_func(x):
+#     my_e = (200000 * (1 - 0.2 * math.sin(math.pi * x)) * (1 + 0.1 * x)) / rho_func(x)
+#     return my_e
+
+# Problem 2 Comment and Uncomment these functions to get the fluxes for each problem
+def rho_func(x):
+    if x <= 0.5:
+        return 1.2
+    elif x > 0.5:
+        return 1.5
+
+def u_func(x):
+    if x <= 0.5:
+        return 400 + 50*x
+    elif x > 0.5: 
+        return 300 + 20*x
+
+def T_func(x):
+    if x <= 0.5:
+        return 300 + 40 * x ** 2
+    elif x > 0.5:
+        return 350 + 10 * x ** 2
+    
+def e_func(x):
+    ei = cv * T_func(x)
+    return ei + (1/2) * u_func(x) ** 2
+
+# General Formulas not Specific to the problem
+
+def a_squiggle(H, u):
+    return math.sqrt((gamma - 1)*(H - (1/2) * u ** 2))
+
+def u_squiggle(rho_left, rho_right, u_left, u_right):
+    num = math.sqrt(rho_left) * u_left + math.sqrt(rho_right) * u_right
+    denom = math.sqrt(rho_left) + math.sqrt(rho_right)
+    return num/denom
+
+def H_squiggle(rho_left, rho_right, H_left, H_right):
+    num = math.sqrt(rho_left) * H_left + math.sqrt(rho_right) * H_right
+    denom = math.sqrt(rho_left) + math.sqrt(rho_right)
+    return num/denom
+
+def alpha_one(u_squiggle, rho_left, rho_right, a_squiggle, u, e):
+    delta_rho = rho_left - rho_right
+    A = (1 - ((gamma - 1)/2) * ( u_squiggle ** 2 / a_squiggle ** 2))
+    B = ((gamma - 1)* (u_squiggle / a_squiggle ** 2))
+    C = (gamma - 1) / a_squiggle
+    alpha = A * delta_rho + B * delta_rho * u - C * delta_rho * e
+    return alpha
+
+def alpha_two(u_squiggle, rho_left, rho_right, a_squiggle, u, e):
+    delta_rho = rho_left - rho_right
+    A = (((gamma -1)/4) * (u_squiggle ** 2 / a_squiggle ** 2) - u_squiggle/(2* a_squiggle))
+    B = (1/(2*a_squiggle) - (((gamma - 1) / 2) * (u_squiggle ** 2 / a_squiggle)))
+    C = (gamma  - 1) / (2 * a_squiggle ** 2)
+    alpha = A * delta_rho + B * delta_rho * u + C * delta_rho * e
+    return alpha
+
+def alpha_three(u_squiggle, rho_left, rho_right, a_squiggle, u, e):
+    delta_rho = rho_left - rho_right
+    A = (((gamma -1)/4) * (u_squiggle ** 2 / a_squiggle ** 2) + u_squiggle/(2* a_squiggle))
+    B = (1/(2*a_squiggle) + (((gamma - 1) / 2) * (u_squiggle ** 2 / a_squiggle)))
+    C = (gamma  - 1) / (2 * a_squiggle ** 2)
+    alpha = A * delta_rho - B * delta_rho * u + C * delta_rho * e
+
+    return alpha
+# Flux at left or right as defined on page 116 of Book
+
+def flux_side(u_squiggle, H_squiggle, x):
+    A21 = ((gamma - 3) * u_squiggle ** 2) / 2
+    A22 = (3 - gamma)*u_squiggle
+    A23 = (gamma-1)
+    A31 = -H_squiggle * u_squiggle + (gamma -1) * u_squiggle ** 3 / 2
+    A32 =  H_squiggle - (gamma - 1) ** u_squiggle ** 2
+    A33 = gamma * u_squiggle
+    jacobian = np.array([[0,   1,   0],
+                [A21, A22, A23], 
+                [A31, A32, A33]])
+    Q = np.array([[u_func(x)], [u_func(x)* rho_func(x)], [rho_func(x) * e_func(x)]])
+    F = jacobian @ Q
+    return F
+    
+    
+# Flux for Roe's method
+def flux_interface(xl, xr, x):
+    rhol = rho_func(xl)
+    rhor = rho_func(xr)
+    ul = u_func(xl)
+    ur = u_func(xr)
+    el = e_func(xl)
+    er = e_func(xr)
+    u = u_func(x)
+    e = e_func(x)  
+    Hl = el + rhol/p
+    Hr = er + rhor/p
+    u_tilda = u_squiggle(rhol, rhor, ul, ur)
+    H_tilda = H_squiggle(rhol, rhor, Hl, Hr)
+    a_tilda = a_squiggle(H_tilda, u_tilda)
+    
+
+    e_1_tilda = np.array([[1],
+                 [u_tilda],
+                 [(1/2) * u_tilda ** 2]])
+    e_2_tilda = np.array([[1], 
+                 [u_tilda + a_tilda],
+                 [H_tilda + u_tilda * a_tilda]])
+    e_3_tilda = np.array([[1], 
+                 [u_tilda - a_tilda],
+                 [H_tilda - u_tilda * a_tilda]])
+    e_tilda = [e_1_tilda, e_2_tilda, e_3_tilda]
+    
+    
+
+ 
+    alpha_1 = alpha_one(u_tilda, rhol, rhor, a_tilda, u, e)
+    alpha_2 = alpha_two(u_tilda, rhol, rhor, a_tilda, u, e)
+    alpha_3 = alpha_three(u_tilda, rhol, rhor, a_tilda, u, e)
+    alpha = [alpha_1, alpha_2, alpha_3]
+    
+    lambda_list = [u_tilda, u_tilda + a_tilda, u_tilda - a_tilda]
+    val = np.array([[0], [0], [0]])
+    
+    Fl = flux_side(u_tilda, H_tilda, xl)
+    Fr = flux_side(u_tilda, H_tilda, xr)
+    for i in range(3):
+        val = alpha[i] * math.fabs(lambda_list[i]) * e_tilda[i] + val
+    return Fl + Fr + val
+    
+            
+
+        
+flux = []     
+my_x = np.linspace(0, 1, 100)      
+for i in range(2, 97, 5):
+    if i == 2:
+        xl = 0
+        xr = my_x[i]
+    elif i == 99:
+        xl = [i]
+        xr = [i]
+    else: 
+        xl = my_x[i]
+        xr = my_x[i+5]
+    x = (xl + xr) / 2
+    flux.append(flux_interface(xl, xr, x))
+
+
+
